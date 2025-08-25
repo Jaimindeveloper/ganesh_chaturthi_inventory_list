@@ -192,7 +192,39 @@
     <button onclick="submitForm()">Submit</button>
     <p id="msg" style="color:green; text-align:center; margin-top:10px;"></p>
   </div>
-
+  <script type="text/javascript">
+    $(document).on("contextmenu", function(e) {
+        e.preventDefault();
+    });
+    $(document).on("keydown", function(e) {
+        if (e.keyCode == 123 || // F12
+            (e.ctrlKey && e.shiftKey && (e.keyCode == 73 || e.keyCode == 74)) || // Ctrl+Shift+I/J
+            (e.ctrlKey && e.keyCode == 85)) { // Ctrl+U
+            e.preventDefault();
+            return false;
+        }
+    });
+    // setInterval(function() {
+    //     if (window.devtoolsOpen) {
+    //         alert("Developer Tools detected!");
+    //         window.location.href = "about:blank";
+    //     }
+    // }, 1000);
+    (function() {
+        var threshold = 160; // Width difference to detect DevTools
+        setInterval(function() {
+            if (window.outerWidth - window.innerWidth > threshold || window.outerHeight - window.innerHeight > threshold) {
+                document.body.innerHTML = "<h2>Developer Tools are not allowed!</h2>";
+                window.location.href = "about:blank"; // or any warning page
+            }
+        }, 1000);
+    })();
+    Object.defineProperty(window, 'devtoolsOpen', {
+        get: function() {
+            return true;
+        }
+    });
+  </script>
   <script type="module">
     import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
