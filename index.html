@@ -229,417 +229,425 @@
     
     const keyBase64 = "bXlTdXBlclNlY3JldEtleTEyMw==";
     const secretKey = atob(keyBase64);
-
+    let S_URL = null;
+    let ANON_KEY = null;
     $.ajax({
         url: '/api/crypto',
         method: 'POST',
         contentType: 'application/json',
         data: JSON.stringify({ text: URL, action: 'decrypt' }),
         success: function(response) {
-            console.log(response.result)
+            S_URL = response.decrypted;
+            $.ajax({
+                url: '/api/crypto',
+                method: 'POST',
+                contentType: 'application/json',
+                data: JSON.stringify({ text: KEY, action: 'decrypt' }),
+                success: function(response) {
+                    ANON_KEY = response.decrypted;
+
+                    const supabase = createClient(S_URL, ANON_KEY);
+                    const items = [
+                      { gu: "પાથરણા", en: "patharana" },
+                      { gu: "સ્ટેન્ડ (પ્રતિકૃતિ માટે)", en: "stand" },
+                      { gu: "ટીવી", en: "tv" },
+                      { gu: "વીસીઆર/વિસીપી", en: "vcr" },
+                      { gu: "એમ્પ્લીફાયર", en: "amplifier" },
+                      { gu: "સ્પીકર્સ", en: "speakers" },
+                      { gu: "માઈક્રોફોન", en: "microphone" },
+                      { gu: "જનરેટર સેટ", en: "generator_set" },
+                      { gu: "ઈલેક્ટ્રીકલ કીટ", en: "electrical_kit" },
+                      { gu: "પુસ્તકો", en: "books" },
+                      { gu: "પુસ્તકો માટે કબાટ", en: "book_cupboard" },
+                      { gu: "પુજારી ની કીટ", en: "pujari_kit" },
+                      { gu: "પાલખી જૂની", en: "palakhi_old" },
+                      { gu: "પાલખી નવી", en: "palakhi_new" },
+                      { gu: "સોલાર લેમ્પ જુના", en: "solar_lamp_old" },
+                      { gu: "સોલાર લેમ્પ નવા", en: "solar_lamp_new" },
+                      { gu: "ખેતી ના સાધનો", en: "farming_tools" },
+                      { gu: "ફર્સ્ટ એઇડ બોક્સ", en: "first_aid_box" }
+                    ];
+                    const tbody = document.querySelector("#itemsTable tbody");
+
+                    // Dynamically create rows
+                    items.forEach((item, index) => {
+                        const tr = document.createElement("tr");
+                        // Serial No
+                        const tdIndex = document.createElement("td");
+                        tdIndex.textContent = index + 1;
+                        tr.appendChild(tdIndex);
+
+                        // Item Name
+                        const tdItem = document.createElement("td");
+                        tdItem.textContent = item.gu;
+                        
+                        tr.appendChild(tdItem);
+
+                        // Six Gam qty inputs
+                        for (let i = 1; i <= 2; i++) {
+                            const tdInput = document.createElement("td");
+                            const input = document.createElement("input");
+                            if (i == 2) {
+                              input.type = "text";
+                              input.id = `item${index + 1}_gam${i}`;
+                            } else {
+                              input.type = "number";
+                              input.min = "0";
+                              input.className = "qty";
+                              input.id = item.en;
+                            }
+                            tdInput.appendChild(input);
+                            tr.appendChild(tdInput);
+                        }
+                        
+                        tbody.appendChild(tr);
+                    });
+
+                    const districtSelect = document.getElementById('district');
+                    const talukaSelect = document.getElementById('taluka');
+                    const groupSelect = document.getElementById('group');
+
+                    // ✅ Load all data once (or you can fetch on each change)
+                    let viewData = [];
+
+                    // Fetch view data on load
+                    async function loadData() {
+                      let from = 0;
+                      let to = 999;
+                      let hasMore = true;
+
+                      while (hasMore) {
+                        const { data, error } = await supabase
+                          .from('location_master')
+                          .select('*')
+                          .range(from, to);
+
+                        if (error) {
+                          console.error('Error fetching data:', error);
+                          break;
+                        }
+
+                        if (data.length === 0) {
+                          hasMore = false;
+                        } else {
+                          viewData = viewData.concat(data);
+                          from += 1000;
+                          to += 1000;
+                        }
+                      }
+                      
+                      // Extract unique districts
+                      const districts = [...new Set(viewData.map(item => item.District))];
+
+                      districts.forEach(d => {
+                        const option = document.createElement('option');
+                        option.value = d;
+                        option.textContent = d;
+                        districtSelect.appendChild(option);
+                      });
+                    }
+
+
+                    // When district changes → load talukas
+                    districtSelect.addEventListener('change', () => {
+                      talukaSelect.innerHTML = '<option value="">Select Taluka</option>';
+                      groupSelect.innerHTML = '<option value="">Select Group</option>';
+                      groupSelect.disabled = true;
+
+                      const district = districtSelect.value;
+                      if (!district) {
+                        talukaSelect.disabled = true;
+                        return;
+                      }
+
+                      const talukas = [
+                        ...new Set(viewData
+                          .filter(item => item.District === district)
+                          .map(item => item.Taluka))
+                      ];
+
+                      talukas.forEach(t => {
+                        const option = document.createElement('option');
+                        option.value = t;
+                        option.textContent = t;
+                        talukaSelect.appendChild(option);
+                      });
+
+                      talukaSelect.disabled = false;
+                    });
+
+                    // When taluka changes → load groups
+                    talukaSelect.addEventListener('change', () => {
+                      groupSelect.innerHTML = '<option value="">Select Group</option>';
+
+                      const district = districtSelect.value;
+                      const taluka = talukaSelect.value;
+
+                      if (!taluka) {
+                        groupSelect.disabled = true;
+                        return;
+                      }
+
+                      const groups = [
+                        ...new Set(viewData
+                          .filter(item => item.District === district && item.Taluka === taluka)
+                          .map(item => item.Group))
+                      ];
+
+                      groups.forEach(g => {
+                        const option = document.createElement('option');
+                        option.value = g;
+                        option.textContent = g;
+                        groupSelect.appendChild(option);
+                      });
+
+                      groupSelect.disabled = false;
+                    });
+
+                    loadData();
+
+                    window.submitForm = async function() {
+                      let validQty = true;
+                      // Validate Full Name
+                      const fullNameInput = document.getElementById("fullName");
+                      const fullnameValue = fullNameInput.value.trim();
+
+                      if (!validateFullName(fullnameValue)) {
+                          alert("Please enter valid full name (e.g., Lastname Firstname Middlename)");
+                          fullNameInput.classList.add("error"); // ✅ Correct method
+                          return;
+                      } else {
+                          fullNameInput.classList.remove("error");
+                      }
+
+                      const mobileInput = document.getElementById("mobile");
+                      const mobileValue = mobileInput.value.trim();
+
+                      if (!validateMobile(mobileValue)) {
+                          alert("Please enter a valid 10-digit mobile number.");
+                          mobileInput.classList.add("error"); // ✅ Correct method
+                          return; // Stop form submission
+                      } else {
+                          mobileInput.classList.remove("error");
+                      }
+
+                      const taluka = document.getElementById("taluka");
+                      const group = document.getElementById("group");
+
+                      const otherTalukaCheckbox = document.getElementById("otherTalukaCheckbox");
+                      const otherTalukaInput = document.getElementById("otherTalukaInput");
+
+                      // Validate Taluka
+                      if (otherTalukaCheckbox.checked) {
+                          // Validate the manual input
+                          const value = otherTalukaInput.value.trim();
+                          const regex = /^[A-Za-z\s]+$/; // First letter capital, letters only
+
+                          if (value === "") {
+                              alert("Please enter Taluka.");
+                              otherTalukaInput.classList.add("error");
+                              return false;
+                          } else if (!regex.test(value)) {
+                              alert("Please enter valid taluka name.");
+                              otherTalukaInput.classList.add("error");
+                              return false;
+                          } else {
+                              otherTalukaInput.classList.remove("error");
+                          }
+
+                      } else {
+                          // Validate Taluka
+                          if (!taluka.value) {
+                              alert("Please select a Taluka.");
+                              taluka.classList.add("error");
+                              return;
+                          } else {
+                              taluka.classList.remove("error");
+                          }
+                      }
+
+                      const otherGroupCheckbox = document.getElementById("otherGroupCheckbox");
+                      const otherGroupInput = document.getElementById("otherGroupInput");
+
+                      // Validate Group
+                      if (otherGroupCheckbox.checked) {
+                          // Validate the manual input
+                          const value = otherGroupInput.value.trim();
+                          const regex = /^[A-Za-z\s]+$/; // First letter capital, letters only
+
+                          if (value === "") {
+                              alert("Please enter Group.");
+                              otherGroupInput.classList.add("error");
+                              return false;
+                          } else if (!regex.test(value)) {
+                              alert("Please enter valid group name.");
+                              otherGroupInput.classList.add("error");
+                              return false;
+                          } else {
+                              otherGroupInput.classList.remove("error");
+                          }
+
+                      } else {
+                          // Validate Group
+                          if (!group.value) {
+                              alert("Please select a Group.");
+                              group.classList.add("error");
+                              return;
+                          } else {
+                              group.classList.remove("error");
+                          }
+                      }
+                      
+                      const gamInput = document.getElementById("gam");
+                      const gamValue = gamInput.value.trim();
+
+                      if (!isValidFirstLetterCapital(gamValue)) {
+                          alert("Please enter valid gam name.");
+                          gamInput.classList.add("error"); // ✅ Correct method
+                          return;
+                      } else {
+                          gamInput.classList.remove("error");
+                      }
+
+                      // Validate Quantity Inputs input.value == "" || 
+                      document.querySelectorAll(".qty").forEach(input => {
+                        if (isNaN(input.value) || input.value < 0) {
+                            input.classList.add("error");  // Add error class if invalid
+                            validQty = false;
+                        } else {
+                            input.classList.remove("error"); // Remove error if valid
+                        }
+                      });
+
+                      if (!validQty) {
+                        alert("Please enter valid quantity values (non-negative numbers only).");
+                        return; // Stop further execution
+                      }
+
+                      // Show loader
+                      document.getElementById('loader').style.display = 'block';
+                      document.getElementById('loaderOverlay').style.display = 'block';
+
+                      const talukaFormData = (otherTalukaCheckbox.checked) ? document.getElementById("otherTalukaInput").value : document.getElementById("taluka").value;
+                      const groupFormData = (otherGroupCheckbox.checked) ? document.getElementById("otherGroupInput").value : document.getElementById("group").value;
+                      const checkbox = document.getElementById("noInventory");
+                      let formData = {
+                        full_name: document.getElementById("fullName").value,
+                        mobile: document.getElementById("mobile").value,
+                        district: document.getElementById("district").value,
+                        taluka: talukaFormData,
+                        group_name: groupFormData,
+                        gam: document.getElementById("gam").value,
+                        no_inventory: checkbox.checked ? "true" : "false"
+                      };
+
+                      let index = 1;
+
+                      document.querySelectorAll("#itemsTable tr").forEach(row => {
+                        const cols = row.querySelectorAll("td");
+                        if (cols.length >= 4) {  // Ensure enough columns
+                          let item = cols[2].querySelector("input").id;
+                          const qtyValues = cols[2].querySelector("input").value.trim();
+                          const remarks = cols[3].querySelector("input").value.trim();
+
+                          let qtyVal = remarks !== '' ? `${qtyValues} (${remarks})` : qtyValues;
+
+                          // Add dynamic key like item1, item2, item3...
+                          formData[item] = `${qtyVal}`;
+                          index++;
+                        }
+                      });
+
+                      const { data, error } = await supabase
+                        .from('inventory_records')
+                        .insert([formData]); // Pass your object inside an array
+
+                      if (error) {
+                        console.error(error);
+                        alert('Error: ' + error.message);
+                        setTimeout(() => {
+                            location.reload();
+                        }, 1000);
+                      } else {
+                        alert("✅ ગામનો ડેટા સફળતાપૂર્વક Submit થઈ ગયો છે");
+                        setTimeout(() => {
+                            location.reload();
+                        }, 1000);
+                      }
+                    };
+
+                    function validateFullName(nameField) {
+                      // Regex: Each word starts with uppercase letter followed by lowercase letters
+                      const namePattern = /^[A-Za-z\s]+$/;
+                      return namePattern.test(nameField);
+                    }
+                    function validateMobile(mobile) {
+                        const mobilePattern = /^[0-9]{10}$/;
+                        return mobilePattern.test(mobile);
+                    }
+                    function isValidFirstLetterCapital(value) {
+                        return /^[A-Za-z\s]+$/.test(value);
+                    }
+                    // Select all inputs
+                    document.querySelectorAll('input, select').forEach(input => {
+                      input.addEventListener('focus', function () {
+                        this.classList.remove('error');
+                      });
+                    });
+
+                    document.getElementById("noInventory").addEventListener("change", function() {
+                      const itemListDiv = document.getElementById("itemList");
+                      if (this.checked) {
+                        itemListDiv.style.display = "none";
+                      } else {
+                        itemListDiv.style.display = "block";
+                      }
+                    });
+
+                    document.getElementById("otherTalukaCheckbox").addEventListener("change", function() {
+                      const otherInput = document.getElementById("otherTalukaInput");
+                      const talukaSelect = document.getElementById("taluka");
+                      talukaSelect.classList.remove("error");
+                      otherInput.classList.remove("error");
+                      if (this.checked) {
+                          otherInput.style.display = "inline-block"; // Show text input
+                          otherInput.required = true;
+                          talukaSelect.disabled = true; // Disable dropdown
+                      } else {
+                          otherInput.style.display = "none"; // Hide text input
+                          otherInput.required = false;
+                          talukaSelect.disabled = false; // Enable dropdown
+                          otherInput.value = ""; // Clear text input
+                      }
+                    });
+                    document.getElementById("otherGroupCheckbox").addEventListener("change", function() {
+                      const otherInput = document.getElementById("otherGroupInput");
+                      const groupSelect = document.getElementById("group");
+                      groupSelect.classList.remove("error");
+                      otherInput.classList.remove("error");
+                      if (this.checked) {
+                          otherInput.style.display = "inline-block"; // Show text input
+                          otherInput.required = true;
+                          groupSelect.disabled = true; // Disable dropdown
+                          groupSelect.classList.remove("error");
+                      } else {
+                          otherInput.style.display = "none"; // Hide text input
+                          otherInput.required = false;
+                          groupSelect.disabled = false; // Enable dropdown
+                          otherInput.value = ""; // Clear text input
+                      }
+                    });
+                    
+                },
+                error: function() {
+                    $('#result').text('Decryption failed');
+                }
+            });
+
         },
         error: function() {
             $('#result').text('Decryption failed');
         }
-    });
-
-    const bytes = CryptoJS.AES.decrypt(URL, secretKey);
-    const S_URL = bytes.toString(CryptoJS.enc.Utf8);
-
-    const bytesKey = CryptoJS.AES.decrypt(KEY, secretKey);
-    const ANON_KEY = bytesKey.toString(CryptoJS.enc.Utf8);
-
-    const supabase = createClient(S_URL, ANON_KEY);
-
-    const items = [
-      { gu: "પાથરણા", en: "patharana" },
-      { gu: "સ્ટેન્ડ (પ્રતિકૃતિ માટે)", en: "stand" },
-      { gu: "ટીવી", en: "tv" },
-      { gu: "વીસીઆર/વિસીપી", en: "vcr" },
-      { gu: "એમ્પ્લીફાયર", en: "amplifier" },
-      { gu: "સ્પીકર્સ", en: "speakers" },
-      { gu: "માઈક્રોફોન", en: "microphone" },
-      { gu: "જનરેટર સેટ", en: "generator_set" },
-      { gu: "ઈલેક્ટ્રીકલ કીટ", en: "electrical_kit" },
-      { gu: "પુસ્તકો", en: "books" },
-      { gu: "પુસ્તકો માટે કબાટ", en: "book_cupboard" },
-      { gu: "પુજારી ની કીટ", en: "pujari_kit" },
-      { gu: "પાલખી જૂની", en: "palakhi_old" },
-      { gu: "પાલખી નવી", en: "palakhi_new" },
-      { gu: "સોલાર લેમ્પ જુના", en: "solar_lamp_old" },
-      { gu: "સોલાર લેમ્પ નવા", en: "solar_lamp_new" },
-      { gu: "ખેતી ના સાધનો", en: "farming_tools" },
-      { gu: "ફર્સ્ટ એઇડ બોક્સ", en: "first_aid_box" }
-    ];
-    const tbody = document.querySelector("#itemsTable tbody");
-
-    // Dynamically create rows
-    items.forEach((item, index) => {
-        const tr = document.createElement("tr");
-        // Serial No
-        const tdIndex = document.createElement("td");
-        tdIndex.textContent = index + 1;
-        tr.appendChild(tdIndex);
-
-        // Item Name
-        const tdItem = document.createElement("td");
-        tdItem.textContent = item.gu;
-        
-        tr.appendChild(tdItem);
-
-        // Six Gam qty inputs
-        for (let i = 1; i <= 2; i++) {
-            const tdInput = document.createElement("td");
-            const input = document.createElement("input");
-            if (i == 2) {
-              input.type = "text";
-              input.id = `item${index + 1}_gam${i}`;
-            } else {
-              input.type = "number";
-              input.min = "0";
-              input.className = "qty";
-              input.id = item.en;
-            }
-            tdInput.appendChild(input);
-            tr.appendChild(tdInput);
-        }
-        
-        tbody.appendChild(tr);
-    });
-
-    const districtSelect = document.getElementById('district');
-    const talukaSelect = document.getElementById('taluka');
-    const groupSelect = document.getElementById('group');
-
-    // ✅ Load all data once (or you can fetch on each change)
-    let viewData = [];
-
-    // Fetch view data on load
-    async function loadData() {
-      let from = 0;
-      let to = 999;
-      let hasMore = true;
-
-      while (hasMore) {
-        const { data, error } = await supabase
-          .from('location_master')
-          .select('*')
-          .range(from, to);
-
-        if (error) {
-          console.error('Error fetching data:', error);
-          break;
-        }
-
-        if (data.length === 0) {
-          hasMore = false;
-        } else {
-          viewData = viewData.concat(data);
-          from += 1000;
-          to += 1000;
-        }
-      }
-      
-      // Extract unique districts
-      const districts = [...new Set(viewData.map(item => item.District))];
-
-      districts.forEach(d => {
-        const option = document.createElement('option');
-        option.value = d;
-        option.textContent = d;
-        districtSelect.appendChild(option);
-      });
-    }
-
-
-    // When district changes → load talukas
-    districtSelect.addEventListener('change', () => {
-      talukaSelect.innerHTML = '<option value="">Select Taluka</option>';
-      groupSelect.innerHTML = '<option value="">Select Group</option>';
-      groupSelect.disabled = true;
-
-      const district = districtSelect.value;
-      if (!district) {
-        talukaSelect.disabled = true;
-        return;
-      }
-
-      const talukas = [
-        ...new Set(viewData
-          .filter(item => item.District === district)
-          .map(item => item.Taluka))
-      ];
-
-      talukas.forEach(t => {
-        const option = document.createElement('option');
-        option.value = t;
-        option.textContent = t;
-        talukaSelect.appendChild(option);
-      });
-
-      talukaSelect.disabled = false;
-    });
-
-    // When taluka changes → load groups
-    talukaSelect.addEventListener('change', () => {
-      groupSelect.innerHTML = '<option value="">Select Group</option>';
-
-      const district = districtSelect.value;
-      const taluka = talukaSelect.value;
-
-      if (!taluka) {
-        groupSelect.disabled = true;
-        return;
-      }
-
-      const groups = [
-        ...new Set(viewData
-          .filter(item => item.District === district && item.Taluka === taluka)
-          .map(item => item.Group))
-      ];
-
-      groups.forEach(g => {
-        const option = document.createElement('option');
-        option.value = g;
-        option.textContent = g;
-        groupSelect.appendChild(option);
-      });
-
-      groupSelect.disabled = false;
-    });
-
-    loadData();
-
-    window.submitForm = async function() {
-      let validQty = true;
-      // Validate Full Name
-      const fullNameInput = document.getElementById("fullName");
-      const fullnameValue = fullNameInput.value.trim();
-
-      if (!validateFullName(fullnameValue)) {
-          alert("Please enter valid full name (e.g., Lastname Firstname Middlename)");
-          fullNameInput.classList.add("error"); // ✅ Correct method
-          return;
-      } else {
-          fullNameInput.classList.remove("error");
-      }
-
-      const mobileInput = document.getElementById("mobile");
-      const mobileValue = mobileInput.value.trim();
-
-      if (!validateMobile(mobileValue)) {
-          alert("Please enter a valid 10-digit mobile number.");
-          mobileInput.classList.add("error"); // ✅ Correct method
-          return; // Stop form submission
-      } else {
-          mobileInput.classList.remove("error");
-      }
-
-      const taluka = document.getElementById("taluka");
-      const group = document.getElementById("group");
-
-      const otherTalukaCheckbox = document.getElementById("otherTalukaCheckbox");
-      const otherTalukaInput = document.getElementById("otherTalukaInput");
-
-      // Validate Taluka
-      if (otherTalukaCheckbox.checked) {
-          // Validate the manual input
-          const value = otherTalukaInput.value.trim();
-          const regex = /^[A-Za-z\s]+$/; // First letter capital, letters only
-
-          if (value === "") {
-              alert("Please enter Taluka.");
-              otherTalukaInput.classList.add("error");
-              return false;
-          } else if (!regex.test(value)) {
-              alert("Please enter valid taluka name.");
-              otherTalukaInput.classList.add("error");
-              return false;
-          } else {
-              otherTalukaInput.classList.remove("error");
-          }
-
-      } else {
-          // Validate Taluka
-          if (!taluka.value) {
-              alert("Please select a Taluka.");
-              taluka.classList.add("error");
-              return;
-          } else {
-              taluka.classList.remove("error");
-          }
-      }
-
-      const otherGroupCheckbox = document.getElementById("otherGroupCheckbox");
-      const otherGroupInput = document.getElementById("otherGroupInput");
-
-      // Validate Group
-      if (otherGroupCheckbox.checked) {
-          // Validate the manual input
-          const value = otherGroupInput.value.trim();
-          const regex = /^[A-Za-z\s]+$/; // First letter capital, letters only
-
-          if (value === "") {
-              alert("Please enter Group.");
-              otherGroupInput.classList.add("error");
-              return false;
-          } else if (!regex.test(value)) {
-              alert("Please enter valid group name.");
-              otherGroupInput.classList.add("error");
-              return false;
-          } else {
-              otherGroupInput.classList.remove("error");
-          }
-
-      } else {
-          // Validate Group
-          if (!group.value) {
-              alert("Please select a Group.");
-              group.classList.add("error");
-              return;
-          } else {
-              group.classList.remove("error");
-          }
-      }
-      
-      const gamInput = document.getElementById("gam");
-      const gamValue = gamInput.value.trim();
-
-      if (!isValidFirstLetterCapital(gamValue)) {
-          alert("Please enter valid gam name.");
-          gamInput.classList.add("error"); // ✅ Correct method
-          return;
-      } else {
-          gamInput.classList.remove("error");
-      }
-
-      // Validate Quantity Inputs input.value == "" || 
-      document.querySelectorAll(".qty").forEach(input => {
-        if (isNaN(input.value) || input.value < 0) {
-            input.classList.add("error");  // Add error class if invalid
-            validQty = false;
-        } else {
-            input.classList.remove("error"); // Remove error if valid
-        }
-      });
-
-      if (!validQty) {
-        alert("Please enter valid quantity values (non-negative numbers only).");
-        return; // Stop further execution
-      }
-
-      // Show loader
-      document.getElementById('loader').style.display = 'block';
-      document.getElementById('loaderOverlay').style.display = 'block';
-
-      const talukaFormData = (otherTalukaCheckbox.checked) ? document.getElementById("otherTalukaInput").value : document.getElementById("taluka").value;
-      const groupFormData = (otherGroupCheckbox.checked) ? document.getElementById("otherGroupInput").value : document.getElementById("group").value;
-      const checkbox = document.getElementById("noInventory");
-      let formData = {
-        full_name: document.getElementById("fullName").value,
-        mobile: document.getElementById("mobile").value,
-        district: document.getElementById("district").value,
-        taluka: talukaFormData,
-        group_name: groupFormData,
-        gam: document.getElementById("gam").value,
-        no_inventory: checkbox.checked ? "true" : "false"
-      };
-
-      let index = 1;
-
-      document.querySelectorAll("#itemsTable tr").forEach(row => {
-        const cols = row.querySelectorAll("td");
-        if (cols.length >= 4) {  // Ensure enough columns
-          let item = cols[2].querySelector("input").id;
-          const qtyValues = cols[2].querySelector("input").value.trim();
-          const remarks = cols[3].querySelector("input").value.trim();
-
-          let qtyVal = remarks !== '' ? `${qtyValues} (${remarks})` : qtyValues;
-
-          // Add dynamic key like item1, item2, item3...
-          formData[item] = `${qtyVal}`;
-          index++;
-        }
-      });
-
-      const { data, error } = await supabase
-        .from('inventory_records')
-        .insert([formData]); // Pass your object inside an array
-
-      if (error) {
-        console.error(error);
-        alert('Error: ' + error.message);
-        setTimeout(() => {
-            location.reload();
-        }, 1000);
-      } else {
-        alert("✅ ગામનો ડેટા સફળતાપૂર્વક Submit થઈ ગયો છે");
-        setTimeout(() => {
-            location.reload();
-        }, 1000);
-      }
-    };
-
-    function validateFullName(nameField) {
-      // Regex: Each word starts with uppercase letter followed by lowercase letters
-      const namePattern = /^[A-Za-z\s]+$/;
-      return namePattern.test(nameField);
-    }
-    function validateMobile(mobile) {
-        const mobilePattern = /^[0-9]{10}$/;
-        return mobilePattern.test(mobile);
-    }
-    function isValidFirstLetterCapital(value) {
-        return /^[A-Za-z\s]+$/.test(value);
-    }
-    // Select all inputs
-    document.querySelectorAll('input, select').forEach(input => {
-      input.addEventListener('focus', function () {
-        this.classList.remove('error');
-      });
-    });
-
-    document.getElementById("noInventory").addEventListener("change", function() {
-      const itemListDiv = document.getElementById("itemList");
-      if (this.checked) {
-        itemListDiv.style.display = "none";
-      } else {
-        itemListDiv.style.display = "block";
-      }
-    });
-
-    document.getElementById("otherTalukaCheckbox").addEventListener("change", function() {
-      const otherInput = document.getElementById("otherTalukaInput");
-      const talukaSelect = document.getElementById("taluka");
-      talukaSelect.classList.remove("error");
-      otherInput.classList.remove("error");
-      if (this.checked) {
-          otherInput.style.display = "inline-block"; // Show text input
-          otherInput.required = true;
-          talukaSelect.disabled = true; // Disable dropdown
-      } else {
-          otherInput.style.display = "none"; // Hide text input
-          otherInput.required = false;
-          talukaSelect.disabled = false; // Enable dropdown
-          otherInput.value = ""; // Clear text input
-      }
-    });
-    document.getElementById("otherGroupCheckbox").addEventListener("change", function() {
-      const otherInput = document.getElementById("otherGroupInput");
-      const groupSelect = document.getElementById("group");
-      groupSelect.classList.remove("error");
-      otherInput.classList.remove("error");
-      if (this.checked) {
-          otherInput.style.display = "inline-block"; // Show text input
-          otherInput.required = true;
-          groupSelect.disabled = true; // Disable dropdown
-          groupSelect.classList.remove("error");
-      } else {
-          otherInput.style.display = "none"; // Hide text input
-          otherInput.required = false;
-          groupSelect.disabled = false; // Enable dropdown
-          otherInput.value = ""; // Clear text input
-      }
     });
   </script>
 </body>
