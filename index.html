@@ -234,7 +234,7 @@
         url: '/api/crypto',
         method: 'POST',
         contentType: 'application/json',
-        data: JSON.stringify({ URL, action: 'decrypt' }),
+        data: JSON.stringify({ text: URL, action: 'decrypt' }),
         success: function(response) {
             $('#result').text(response.result);
         },
