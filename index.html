@@ -594,7 +594,7 @@
                         return mobilePattern.test(mobile);
                     }
                     function isValidFirstLetterCapital(value) {
-                        return /^[A-Za-z\s]+$/.test(value);
+                        return /^[A-Za-z0-9\s]+$/.test(value);
                     }
                     // Select all inputs
                     document.querySelectorAll('input, select').forEach(input => {
