@@ -236,7 +236,7 @@
         contentType: 'application/json',
         data: JSON.stringify({ text: URL, action: 'decrypt' }),
         success: function(response) {
-            $('#result').text(response.result);
+            console.log(response.result)
         },
         error: function() {
             $('#result').text('Decryption failed');
