@@ -347,7 +347,9 @@
                       });
                     }
 
-
+                    async function capitalizeEachWord(str) {
+                        return str.toLowerCase().replace(/\b\w/g, char => char.toUpperCase());
+                    }
                     // When district changes → load talukas
                     districtSelect.addEventListener('change', () => {
                       talukaSelect.innerHTML = '<option value="">Select Taluka</option>';
@@ -532,12 +534,12 @@
                       const groupFormData = (otherGroupCheckbox.checked) ? document.getElementById("otherGroupInput").value : document.getElementById("group").value;
                       const checkbox = document.getElementById("noInventory");
                       let formData = {
-                        full_name: document.getElementById("fullName").value,
+                        full_name: capitalizeEachWord(document.getElementById("fullName").value),
                         mobile: document.getElementById("mobile").value,
                         district: document.getElementById("district").value,
                         taluka: talukaFormData,
                         group_name: groupFormData,
-                        gam: document.getElementById("gam").value,
+                        gam: capitalizeEachWord(document.getElementById("gam").value),
                         no_inventory: checkbox.checked ? "true" : "false"
                       };
 
@@ -649,6 +651,7 @@
             $('#result').text('Decryption failed');
         }
     });
+    
   </script>
 </body>
 </html>
