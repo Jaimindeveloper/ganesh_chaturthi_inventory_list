@@ -195,38 +195,53 @@
   <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
   <script type="text/javascript">
-    $(document).on("contextmenu", function(e) {
-        e.preventDefault();
-    });
-    $(document).on("keydown", function(e) {
-        if (e.keyCode == 123 || // F12
-            (e.ctrlKey && e.shiftKey && (e.keyCode == 73 || e.keyCode == 74)) || // Ctrl+Shift+I/J
-            (e.ctrlKey && e.keyCode == 85)) { // Ctrl+U
-            e.preventDefault();
-            return false;
-        }
-    });
-    (function() {
-        var threshold = 160; // Width difference to detect DevTools
-        setInterval(function() {
-            if (window.outerWidth - window.innerWidth > threshold || window.outerHeight - window.innerHeight > threshold) {
-                document.body.innerHTML = "<h2>Developer Tools are not allowed!</h2>";
-                window.location.href = "about:blank"; // or any warning page
-            }
-        }, 1000);
-    })();
-    Object.defineProperty(window, 'devtoolsOpen', {
-        get: function() {
-            return true;
-        }
-    });
+    // $(document).on("contextmenu", function(e) {
+    //     e.preventDefault();
+    // });
+    // $(document).on("keydown", function(e) {
+    //     if (e.keyCode == 123 || // F12
+    //         (e.ctrlKey && e.shiftKey && (e.keyCode == 73 || e.keyCode == 74)) || // Ctrl+Shift+I/J
+    //         (e.ctrlKey && e.keyCode == 85)) { // Ctrl+U
+    //         e.preventDefault();
+    //         return false;
+    //     }
+    // });
+    // (function() {
+    //     var threshold = 160; // Width difference to detect DevTools
+    //     setInterval(function() {
+    //         if (window.outerWidth - window.innerWidth > threshold || window.outerHeight - window.innerHeight > threshold) {
+    //             document.body.innerHTML = "<h2>Developer Tools are not allowed!</h2>";
+    //             window.location.href = "about:blank"; // or any warning page
+    //         }
+    //     }, 1000);
+    // })();
+    // Object.defineProperty(window, 'devtoolsOpen', {
+    //     get: function() {
+    //         return true;
+    //     }
+    // });
   </script>
   <script type="module">
     import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
-    const URL = 'U2FsdGVkX18xSqRKHuYgjumUEO2ozQpeQYChI4anB3hYQ245nBbaAVJyPVT1ySObw6T84IydR5xa+FEgQtLFpg==';
-    const KEY = 'U2FsdGVkX1/viJ0uTwetagO9sju/YyFYSBhmfZg3mGdIBxyAjSCTaCCOIQ3beOmqIz/1FoVwdkmIf9OlP4erJKzB/r/O2ayOXtDk9wgS+RC1aqGMopB2zEHa47EGe7KU+/mrISryhqBoZyZMRikHXSDNQ+AgOlosHK13g1WBjke8GEiEUuhv/dh9g1EKyTd3RVRq0/nW98QDIzrq2NDovAeLblJ5cvF5rgSlz3plQdnP0i7xB8k2ui2t72Fekc+xUBGv14fx95N1/i6P8dG2NAE43BWPKcY5xNzpQGb9+dzhgbQK8E0Nj444nuI48osh';
-    const secretKey = "";
+    const URL = 'U2FsdGVkX19hyzc5WjKnwJeE9r+/IFyMdznhMX/0sW1Ht4ABbwzd0gK6exuEnd7N04eqeHdJqhMY3psodN82rw==';
+    const KEY = 'U2FsdGVkX1+99BfCaCy7mhl0MiyZ4w3I40ZJ+neuSn2boVwGxa0RBvO1BwyhnJKb1jdwdcqRkGX57o/iaqIJ3aaI16Sx5aKeamlG0wuCxe4G1YFmLoWCtRFJwXId1gyA4P4C2o5ZxM/trE7iCB3xOsNlv90Hvgu0X5oH6uq9o2IesXwwKhgmvvm8xx/j9I0B1Ze5x3PGlwYvyoS9c3RK+7boDj2Z63TUV2nK7wVdjonLt6C3va767RZFb2WX7khrL5x2jnV6eD817HIUSzA+aC3PcvAGucq92bGuwrdVDVGmtll5ENfNxCxQhfuxPXgH';
+    
+    const keyBase64 = "bXlTdXBlclNlY3JldEtleTEyMw==";
+    const secretKey = atob(keyBase64);
+
+    $.ajax({
+        url: '/api/crypto',
+        method: 'POST',
+        contentType: 'application/json',
+        data: JSON.stringify({ URL, action: 'decrypt' }),
+        success: function(response) {
+            $('#result').text(response.result);
+        },
+        error: function() {
+            $('#result').text('Decryption failed');
+        }
+    });
 
     const bytes = CryptoJS.AES.decrypt(URL, secretKey);
     const S_URL = bytes.toString(CryptoJS.enc.Utf8);
