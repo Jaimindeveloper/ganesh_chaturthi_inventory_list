@@ -512,7 +512,7 @@
 
       const talukaFormData = (otherTalukaCheckbox.checked) ? document.getElementById("otherTalukaInput").value : document.getElementById("taluka").value;
       const groupFormData = (otherGroupCheckbox.checked) ? document.getElementById("otherGroupInput").value : document.getElementById("group").value;
-
+      const checkbox = document.getElementById("noInventory");
       let formData = {
         full_name: document.getElementById("fullName").value,
         mobile: document.getElementById("mobile").value,
@@ -520,7 +520,7 @@
         taluka: talukaFormData,
         group_name: groupFormData,
         gam: document.getElementById("gam").value,
-        no_inventory: document.getElementById("noInventory").value
+        no_inventory: checkbox.checked ? "true" : "false"
       };
 
       let index = 1;
