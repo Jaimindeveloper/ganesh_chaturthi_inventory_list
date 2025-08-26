@@ -71,98 +71,122 @@
       window.location.href = '/inventory-report-admin';
     }
   </script>
-  <script type="module">
-    import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+<script type="module">
+  import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
-    const URL = 'U2FsdGVkX18xSqRKHuYgjumUEO2ozQpeQYChI4anB3hYQ245nBbaAVJyPVT1ySObw6T84IydR5xa+FEgQtLFpg==';
-    const KEY = 'U2FsdGVkX1/viJ0uTwetagO9sju/YyFYSBhmfZg3mGdIBxyAjSCTaCCOIQ3beOmqIz/1FoVwdkmIf9OlP4erJKzB/r/O2ayOXtDk9wgS+RC1aqGMopB2zEHa47EGe7KU+/mrISryhqBoZyZMRikHXSDNQ+AgOlosHK13g1WBjke8GEiEUuhv/dh9g1EKyTd3RVRq0/nW98QDIzrq2NDovAeLblJ5cvF5rgSlz3plQdnP0i7xB8k2ui2t72Fekc+xUBGv14fx95N1/i6P8dG2NAE43BWPKcY5xNzpQGb9+dzhgbQK8E0Nj444nuI48osh';
-    const secretKey = "";
+  const URL = 'U2FsdGVkX19hyzc5WjKnwJeE9r+/IFyMdznhMX/0sW1Ht4ABbwzd0gK6exuEnd7N04eqeHdJqhMY3psodN82rw==';
+  const KEY = 'U2FsdGVkX1+99BfCaCy7mhl0MiyZ4w3I40ZJ+neuSn2boVwGxa0RBvO1BwyhnJKb1jdwdcqRkGX57o/iaqIJ3aaI16Sx5aKeamlG0wuCxe4G1YFmLoWCtRFJwXId1gyA4P4C2o5ZxM/trE7iCB3xOsNlv90Hvgu0X5oH6uq9o2IesXwwKhgmvvm8xx/j9I0B1Ze5x3PGlwYvyoS9c3RK+7boDj2Z63TUV2nK7wVdjonLt6C3va767RZFb2WX7khrL5x2jnV6eD817HIUSzA+aC3PcvAGucq92bGuwrdVDVGmtll5ENfNxCxQhfuxPXgH';
+  
+  const keyBase64 = "bXlTdXBlclNlY3JldEtleTEyMw==";
+  const secretKey = atob(keyBase64);
+  let S_URL = null;
+  let ANON_KEY = null;
+  $.ajax({
+      url: '/api/crypto',
+      method: 'POST',
+      contentType: 'application/json',
+      data: JSON.stringify({ text: URL, action: 'decrypt' }),
+      success: function(response) {
+          S_URL = response.decrypted;
+          $.ajax({
+              url: '/api/crypto',
+              method: 'POST',
+              contentType: 'application/json',
+              data: JSON.stringify({ text: KEY, action: 'decrypt' }),
+              success: function(response) {
+                  ANON_KEY = response.decrypted;
 
-    const bytes = CryptoJS.AES.decrypt(URL, secretKey);
-    const S_URL = bytes.toString(CryptoJS.enc.Utf8);
+                  const supabase = createClient(S_URL, ANON_KEY);
 
-    const bytesKey = CryptoJS.AES.decrypt(KEY, secretKey);
-    const ANON_KEY = bytesKey.toString(CryptoJS.enc.Utf8);
+                  async function fetchAllRows(tableName) {
+                    let allData = [];
+                    let from = 0;
+                    let to = 999;
+                    let hasMore = true;
 
-    const supabase = createClient(S_URL, ANON_KEY);
+                    while (hasMore) {
+                      const { data, error } = await supabase
+                        .from(tableName)
+                        .select('*')
+                        .range(from, to);
 
-    async function fetchAllRows(tableName) {
-      let allData = [];
-      let from = 0;
-      let to = 999;
-      let hasMore = true;
+                      if (error) {
+                        console.error(`Error fetching ${tableName}:`, error);
+                        break;
+                      }
 
-      while (hasMore) {
-        const { data, error } = await supabase
-          .from(tableName)
-          .select('*')
-          .range(from, to);
+                      if (data.length === 0) {
+                        hasMore = false;
+                      } else {
+                        allData = allData.concat(data);
+                        from += 1000;
+                        to += 1000;
+                      }
+                    }
 
-        if (error) {
-          console.error(`Error fetching ${tableName}:`, error);
-          break;
-        }
+                    return allData;
+                  }
 
-        if (data.length === 0) {
-          hasMore = false;
-        } else {
-          allData = allData.concat(data);
-          from += 1000;
-          to += 1000;
-        }
+                  async function loadSummary() {
+                    const locations = await fetchAllRows('location_master');
+                    const records = await fetchAllRows('inventory_records');
+
+                    if (!locations.length && !records.length) {
+                      $('#summaryTable').html('<tr><td colspan="5">No data found</td></tr>');
+                      return;
+                    }
+
+                    // Convert submitted groups into a Set
+                    const submittedGroups = new Set(records.map(r => r.group_name));
+
+                    // Group location data by district
+                    const districtMap = {};
+                    locations.forEach(loc => {
+                      const district = loc.District ? loc.District.trim() : '';
+                      const group = loc.Group ? loc.Group.trim() : '';
+
+                      if (district && group) {
+                        if (!districtMap[district]) {
+                          districtMap[district] = new Set();
+                        }
+                        districtMap[district].add(group);
+                      }
+                    });
+
+                    // Build HTML rows
+                    let html = '';
+                    for (const district in districtMap) {
+                      const allGroups = Array.from(districtMap[district]);
+                      const submitted = allGroups.filter(g => submittedGroups.has(g));
+                      const notSubmitted = allGroups.filter(g => !submittedGroups.has(g));
+
+                      html += `
+                        <tr>
+                          <td>${district}</td>
+                          <td>${submitted.length}</td>
+                          <td>${notSubmitted.length}</td>
+                          <td>${submitted.length ? submitted.join(', ') : '-'}</td>
+                          <td>${notSubmitted.length ? notSubmitted.join(', ') : '-'}</td>
+                        </tr>`;
+                    }
+
+                    $('#summaryTable').html(html);
+                  }
+
+
+                  $(document).ready(loadSummary);
+
+                },
+              error: function() {
+                  $('#result').text('Decryption failed');
+              }
+          });
+
+      },
+      error: function() {
+          $('#result').text('Decryption failed');
       }
-
-      return allData;
-    }
-
-    async function loadSummary() {
-      const locations = await fetchAllRows('location_master');
-      const records = await fetchAllRows('inventory_records');
-
-      if (!locations.length && !records.length) {
-        $('#summaryTable').html('<tr><td colspan="5">No data found</td></tr>');
-        return;
-      }
-
-      // Convert submitted groups into a Set
-      const submittedGroups = new Set(records.map(r => r.group_name));
-
-      // Group location data by district
-      const districtMap = {};
-      locations.forEach(loc => {
-        const district = loc.District ? loc.District.trim() : '';
-        const group = loc.Group ? loc.Group.trim() : '';
-
-        if (district && group) {
-          if (!districtMap[district]) {
-            districtMap[district] = new Set();
-          }
-          districtMap[district].add(group);
-        }
-      });
-
-      // Build HTML rows
-      let html = '';
-      for (const district in districtMap) {
-        const allGroups = Array.from(districtMap[district]);
-        const submitted = allGroups.filter(g => submittedGroups.has(g));
-        const notSubmitted = allGroups.filter(g => !submittedGroups.has(g));
-
-        html += `
-          <tr>
-            <td>${district}</td>
-            <td>${submitted.length}</td>
-            <td>${notSubmitted.length}</td>
-            <td>${submitted.length ? submitted.join(', ') : '-'}</td>
-            <td>${notSubmitted.length ? notSubmitted.join(', ') : '-'}</td>
-          </tr>`;
-      }
-
-      $('#summaryTable').html(html);
-    }
-
-
-    $(document).ready(loadSummary);
-  </script>
+  });
+</script>
 </body>
 </html>
