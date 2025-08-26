@@ -449,7 +449,7 @@
                       if (otherTalukaCheckbox.checked) {
                           // Validate the manual input
                           const value = otherTalukaInput.value.trim();
-                          const regex = /^[A-Za-z\s]+$/; // First letter capital, letters only
+                          const regex = /^[A-Za-z0-9\s]+$/; // First letter capital, letters only
 
                           if (value === "") {
                               alert("Please enter Taluka.");
@@ -481,7 +481,7 @@
                       if (otherGroupCheckbox.checked) {
                           // Validate the manual input
                           const value = otherGroupInput.value.trim();
-                          const regex = /^[A-Za-z\s]+$/; // First letter capital, letters only
+                          const regex = /^[A-Za-z0-9\s]+$/; // First letter capital, letters only
 
                           if (value === "") {
                               alert("Please enter Group.");
