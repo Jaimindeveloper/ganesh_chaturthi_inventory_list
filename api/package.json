@@ -1,0 +1,8 @@
+{
+  "name": "ganesh-inventory",
+  "version": "1.0.0",
+  "type": "module",
+  "dependencies": {
+    "crypto-js": "^4.1.1"
+  }
+}
