@@ -193,6 +193,7 @@
     <p id="msg" style="color:green; text-align:center; margin-top:10px;"></p>
   </div>
   <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
   <script type="text/javascript">
     $(document).on("contextmenu", function(e) {
         e.preventDefault();
@@ -223,11 +224,17 @@
   <script type="module">
     import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
-    // Replace with your Supabase credentials
-    const SUPABASE_URL = 'https://qbwcbmfxiljzoinxueup.supabase.co';
-    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFid2NibWZ4aWxqem9pbnh1ZXVwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTYxMTE5MDQsImV4cCI6MjA3MTY4NzkwNH0.2hT05Ec00_QUbmn5c3Dt4RwA4lYMi4bUO2mpnyewn-c';
+    const URL = 'U2FsdGVkX18xSqRKHuYgjumUEO2ozQpeQYChI4anB3hYQ245nBbaAVJyPVT1ySObw6T84IydR5xa+FEgQtLFpg==';
+    const KEY = 'U2FsdGVkX1/viJ0uTwetagO9sju/YyFYSBhmfZg3mGdIBxyAjSCTaCCOIQ3beOmqIz/1FoVwdkmIf9OlP4erJKzB/r/O2ayOXtDk9wgS+RC1aqGMopB2zEHa47EGe7KU+/mrISryhqBoZyZMRikHXSDNQ+AgOlosHK13g1WBjke8GEiEUuhv/dh9g1EKyTd3RVRq0/nW98QDIzrq2NDovAeLblJ5cvF5rgSlz3plQdnP0i7xB8k2ui2t72Fekc+xUBGv14fx95N1/i6P8dG2NAE43BWPKcY5xNzpQGb9+dzhgbQK8E0Nj444nuI48osh';
+    const secretKey = "";
 
-    const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    const bytes = CryptoJS.AES.decrypt(URL, secretKey);
+    const S_URL = bytes.toString(CryptoJS.enc.Utf8);
+
+    const bytesKey = CryptoJS.AES.decrypt(KEY, secretKey);
+    const ANON_KEY = bytesKey.toString(CryptoJS.enc.Utf8);
+
+    const supabase = createClient(S_URL, ANON_KEY);
 
     const items = [
       { gu: "પાથરણા", en: "patharana" },
