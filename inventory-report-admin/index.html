@@ -23,6 +23,11 @@
   </div>
   <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
   <script type="text/javascript">
+    const token = localStorage.getItem('token');
+    if (token) {
+      window.location.href = '/inventory-report-admin/dashboard.html';
+    }
+
     $(document).on("contextmenu", function(e) {
         e.preventDefault();
     });
